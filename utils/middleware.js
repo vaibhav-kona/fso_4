@@ -1,3 +1,11 @@
+const morgan = require('morgan');
+
+morgan.token('post-data-object', (req) => {
+  return JSON.stringify(req.body);
+});
+
+const requestLogger = morgan(':method :url :status :res[content-length] - :response-time ms :post-data-object');
+
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' });
 };
@@ -16,5 +24,5 @@ const errorHandler = (error, request, response, next) => {
 };
 
 module.exports = {
-  unknownEndpoint, errorHandler
+  unknownEndpoint, errorHandler, requestLogger,
 }
