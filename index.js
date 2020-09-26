@@ -2,24 +2,31 @@ const http = require('http')
 const express = require('express')
 const app = express();
 const cors = require('cors');
+const config = require('./utils/config');
 const mongoose = require('mongoose');
+const logger = require('./utils/logger');
+const middleware = require('./utils/middleware');
 const blogsRouter = require('./controllers/blogs');
 
-const password = process.argv[2];
-const mongoUrl = `mongodb+srv://fso_3c:${password}@cluster0.ih115.mongodb.net/bloglist?retryWrites=true&w=majority`
-mongoose.connect(mongoUrl, {
+// DB server connection
+mongoose.connect(config.MONGODB_URI, {
   useNewUrlParser: true, useUnifiedTopology: true,
   useFindAndModify: false, useCreateIndex: true
 }).then(() => {
-  console.log("Connected to MongoDB")
+  logger.info("Connected to MongoDB")
 })
 
+// Setup
 app.use(cors())
 app.use(express.json())
 
+// Routes
 app.use('/api/blogs', blogsRouter);
 
-const PORT = 3003
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+// Middleware
+app.use(middleware.unknownEndpoint);
+app.use(middleware.errorHandler);
+
+app.listen(config.PORT, () => {
+  logger.info(`Server running on port ${config.PORT}`)
 })
