@@ -84,6 +84,16 @@ test('blog without title cannot be saved', async () => {
   expect(blogs).toHaveLength(helper.initialBlogs.length);
 });
 
+test('blog without url cannot be saved', async () => {
+  const newBlog = {
+    title: 'React Blog',
+    author: 'Rajesh',
+    likes: 7,
+  };
+
+  await api.post('/api/blogs').send(newBlog).expect(422);
+});
+
 test('blog has uid as "id" instead of "_id"', async () => {
   const blogs = await api
     .get('/api/blogs')
