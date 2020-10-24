@@ -28,12 +28,6 @@ describe('when there are initially some blogs saved', () => {
     expect(response.body).toHaveLength(helper.initialBlogs.length);
   });
 
-  test('the first blog is about hello world', async () => {
-    const response = await api.get('/api/blogs');
-
-    expect(response.body[0].title).toBe(helper.initialBlogs[0].title);
-  });
-
   test('blog has uid as "id" instead of "_id"', async () => {
     const blogs = await api
       .get('/api/blogs')
@@ -66,6 +60,7 @@ describe('addition of new blog', () => {
       author: 'Rajesh',
       url: '/react-blog',
       likes: 7,
+      userId: '',
     };
 
     const savedBlog = await api
@@ -145,14 +140,13 @@ describe('updating a specific blog', () => {
     const blogsAtStart = await helper.blogsInDb();
     const blogToBeUpdated = blogsAtStart[0];
 
-    const updatedBlog = await api.put(`/api/blogs/${blogToBeUpdated.id}`)
+    const updatedBlog = await api
+      .put(`/api/blogs/${blogToBeUpdated.id}`)
       .send({ likes: 10 })
       .expect(200)
       .expect('Content-Type', /application\/json/);
 
-    console.log('saved blog : ', updatedBlog);
-
-    expect(updatedBlog.likes).toBe(10);
+    expect(updatedBlog.body.likes).toBe(10);
   });
 });
 
