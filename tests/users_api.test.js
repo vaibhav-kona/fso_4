@@ -39,8 +39,6 @@ describe('When there is initially one user in db', () => {
   });
 
   test('creation fails with proper statuscode and message if username already exists', async () => {
-    const usersAtStart = await helper.usersInDb();
-
     const newUser = {
       username: 'root',
       name: 'Superuser',
@@ -54,5 +52,67 @@ describe('When there is initially one user in db', () => {
       .expect('Content-type', /application\/json/);
 
     expect(result.body.error).toContain('`username` to be unique');
+  });
+
+  test('should fail if username is not 3 characters in length', async () => {
+    const newUser = {
+      name: 'chi',
+      username: 'ch',
+      password: 'salainen',
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(422)
+      .expect('Content-type', /application\/json/);
+
+    expect(result.body.error).toContain('User validation failed: username: Path `username` (`ch`) is shorter than the minimum allowed length (3).');
+  });
+
+  test('should fail if username is empty', async () => {
+    const newUser = {
+      name: 'chi',
+      password: 'abc',
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(422)
+      .expect('Content-type', /application\/json/);
+
+    expect(result.body.error).toContain('User validation failed: username: Path `username` is required.');
+  });
+
+  test('should fail if password is empty', async () => {
+    const newUser = {
+      name: 'chi',
+      username: 'ch',
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(422)
+      .expect('Content-type', /application\/json/);
+
+    expect(result.body.error).toContain('password should not be empty');
+  });
+
+  test('should fail if password is less than 3 characters', async () => {
+    const newUser = {
+      name: 'chi',
+      username: 'ch',
+      password: 'ab',
+    };
+
+    const result = await api
+      .post('/api/users')
+      .send(newUser)
+      .expect(422)
+      .expect('Content-type', /application\/json/);
+
+    expect(result.body.error).toContain('password should be atleast 3 characters');
   });
 });
