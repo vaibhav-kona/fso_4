@@ -2,22 +2,33 @@ const mongoose = require('mongoose');
 const supertest = require('supertest');
 const app = require('../app');
 const Blog = require('../models/blog');
-const User = require('../models/user');
 const helper = require('./test_helper');
 
 let token = '';
+let loggedInUserId = '';
+
+const api = supertest(app);
 
 beforeAll(async () => {
-  await api
-    .post('/api/users')
-    .send({username: 'root1', password: 'helloworld', name: 'root'});
+  const usersAtStart = await helper.usersInDb();
+  const indexOfRoot = usersAtStart.findIndex((user) => user.username === 'root1');
+
+  if (indexOfRoot !== -1) {
+    loggedInUserId = usersAtStart[indexOfRoot].id;
+  } else {
+    const savedUserResponse = await api
+      .post('/api/users')
+      .send({ username: 'root1', password: 'helloworld', name: 'root' });
+
+    loggedInUserId = savedUserResponse.body.id;
+  }
 
   const loginResponse = await api
     .post('/api/login')
-    .send({username: 'root1', password: 'helloworld'});
+    .send({ username: 'root1', password: 'helloworld' });
 
-  token = loginResponse.token;
-})
+  token = loginResponse.body.token;
+});
 
 beforeEach(async () => {
   await Blog.deleteMany({});
@@ -26,8 +37,6 @@ beforeEach(async () => {
   const promiseArray = blogObjects.map((boj) => boj.save());
   await Promise.all(promiseArray);
 });
-
-const api = supertest(app);
 
 describe('when there are initially some blogs saved', () => {
   test('blogs are returned as json', async () => {
@@ -70,13 +79,12 @@ describe('viewing a specific blog', () => {
 
 describe('addition of new blog', () => {
   test('a valid blog can be added', async () => {
-    const users = await helper.usersInDb();
     const newBlog = {
       title: 'React blog',
       author: 'Rajesh',
       url: '/react-blog',
       likes: 7,
-      userId: users[0].id,
+      userId: loggedInUserId,
     };
 
     const expectedBlog = {
@@ -84,8 +92,8 @@ describe('addition of new blog', () => {
       author: 'Rajesh',
       url: '/react-blog',
       likes: 7,
-      user: users[0].id,
-    }
+      user: loggedInUserId,
+    };
 
     const savedBlog = await api
       .post('/api/blogs')
@@ -103,17 +111,16 @@ describe('addition of new blog', () => {
   });
 
   test('blog created without any likes should be given zero by default', async () => {
-    const users = await helper.usersInDb();
-
     const newBlog = {
       title: 'React blog',
       author: 'Rajesh',
       url: '/react-blog',
-      userId: users[0].id,
+      userId: loggedInUserId,
     };
 
     const savedBlog = await api
       .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`)
       .send(newBlog)
       .expect(201)
       .expect('Content-Type', /application\/json/);
@@ -122,15 +129,18 @@ describe('addition of new blog', () => {
   });
 
   test('blog without title cannot be saved', async () => {
-    const users = await helper.usersInDb();
     const newBlog = {
       author: 'Rajesh',
       url: '/react-blog',
       likes: 7,
-      userId: users[0].id,
+      userId: loggedInUserId,
     };
 
-    await api.post('/api/blogs').send(newBlog).expect(422);
+    await api
+      .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`)
+      .send(newBlog)
+      .expect(422);
 
     const blogs = await helper.blogsInDb();
     expect(blogs).toHaveLength(helper.initialBlogs.length);
@@ -145,7 +155,11 @@ describe('addition of new blog', () => {
       userId: users[0].id,
     };
 
-    await api.post('/api/blogs').send(newBlog).expect(422);
+    await api
+      .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`)
+      .send(newBlog)
+      .expect(422);
   });
 });
 
@@ -156,7 +170,9 @@ describe('deletion of blog', () => {
 
     // Delete certain blog
     const blogToBDeleted = blogsAtStart[0];
-    await api.delete(`/api/blogs/${blogToBDeleted.id}`)
+    await api
+      .delete(`/api/blogs/${blogToBDeleted.id}`)
+      .set('Authorization', `bearer ${token}`)
       .expect(200)
       .expect('Content-Type', /application\/json/);
 

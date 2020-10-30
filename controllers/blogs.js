@@ -1,16 +1,7 @@
 const blogsRouter = require('express').Router();
+const jwt = require('jsonwebtoken');
 const Blog = require('../models/blog');
 const User = require('../models/user');
-const jwt = require('jsonwebtoken');
-const { request } = require('express');
-
-const getTokenFrom = req => {
-  const auth = req.get('authorization');
-  if(auth && auth.toLowerCase().startsWith('bearer ')){
-    return auth.substring(7);
-  }
-  return null;
-}
 
 blogsRouter.get('/', async (request, response) => {
   const blogs = await Blog.find({}).populate('user', { blogs: 0 });
@@ -26,14 +17,11 @@ blogsRouter.get('/:blogId', async (request, response) => {
 });
 
 blogsRouter.post('/', async (request, response) => {
-  const token = getTokenFrom(request);
-  if(!token){
-    return response.status(401).json({error: 'token missing or invalid'});
-  }
+  const { token } = request;
 
   const decodedToken = jwt.verify(token, process.env.SECRET);
-  if(!decodedToken.id){
-    return response.status(401).json({error: 'token missing or invalid'});
+  if (!decodedToken.id) {
+    response.status(401).json({ error: 'token missing or invalid' });
   }
 
   const user = await User.findById(request.body.userId);
@@ -42,10 +30,12 @@ blogsRouter.post('/', async (request, response) => {
     ...request.body,
     ...{
       likes: request.body.likes || 0,
+      // eslint-disable-next-line no-underscore-dangle
       user: user._id,
     },
   });
   const savedBlog = await blog.save();
+  // eslint-disable-next-line no-underscore-dangle
   user.blogs = user.blogs.concat(savedBlog._id);
 
   await user.save();
