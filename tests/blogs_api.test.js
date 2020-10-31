@@ -164,7 +164,7 @@ describe('addition of new blog', () => {
 });
 
 describe('deletion of blog', () => {
-  test('a blog can be deleted', async () => {
+  test('a blog cannot be deleted by unauthenticated user', async () => {
     // Get all blogs in the db at start
     const blogsAtStart = await helper.blogsInDb();
 
@@ -172,15 +172,38 @@ describe('deletion of blog', () => {
     const blogToBDeleted = blogsAtStart[0];
     await api
       .delete(`/api/blogs/${blogToBDeleted.id}`)
-      .set('Authorization', `bearer ${token}`)
-      .expect(200)
-      .expect('Content-Type', /application\/json/);
-
-    // Get all blogs now.
-    const blogsAfterDeletion = await helper.blogsInDb();
-    expect(blogsAfterDeletion.length).toBe(blogsAtStart.length - 1);
-    // Total blogs must be 1 less and the blog that was deleted should not be present.
+      .expect(401);
   });
+
+  // test('a blog cannot be deleted by user other than the one created', async () => {
+  //   // Get all blogs in the db at start
+  //   const blogsAtStart = await helper.blogsInDb();
+
+  //   // Delete certain blog
+  //   const blogToBDeleted = blogsAtStart[0];
+  //   await api
+  //     .delete(`/api/blogs/${blogToBDeleted.id}`)
+  //     .set('Authorization', `bearer ${token}`)
+  //     .expect(403);
+  // });
+
+  // test('a blog can be deleted', async () => {
+  //   // Get all blogs in the db at start
+  //   const blogsAtStart = await helper.blogsInDb();
+
+  //   // Delete certain blog
+  //   const blogToBDeleted = blogsAtStart[0];
+  //   await api
+  //     .delete(`/api/blogs/${blogToBDeleted.id}`)
+  //     // .set('Authorization', `bearer ${token}`)
+  //     .expect(200)
+  //     .expect('Content-Type', /application\/json/);
+
+  //   // Get all blogs now.
+  //   const blogsAfterDeletion = await helper.blogsInDb();
+  //   expect(blogsAfterDeletion.length).toBe(blogsAtStart.length - 1);
+  //   // Total blogs must be 1 less and the blog that was deleted should not be present.
+  // });
 });
 
 describe('updating a specific blog', () => {
