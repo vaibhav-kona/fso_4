@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const supertest = require('supertest');
 const app = require('../app');
 const Blog = require('../models/blog');
+const User = require('../models/user');
 const helper = require('./test_helper');
 
 let token = '';
@@ -10,6 +11,8 @@ let loggedInUserId = '';
 const api = supertest(app);
 
 beforeAll(async () => {
+  await User.deleteMany({});
+
   const usersAtStart = await helper.usersInDb();
   const indexOfRoot = usersAtStart.findIndex((user) => user.username === 'root1');
 
@@ -175,35 +178,78 @@ describe('deletion of blog', () => {
       .expect(401);
   });
 
-  // test('a blog cannot be deleted by user other than the one created', async () => {
-  //   // Get all blogs in the db at start
-  //   const blogsAtStart = await helper.blogsInDb();
+  test('a blog cannot be deleted by user other than the one created', async () => {
+    // Get all blogs in the db at start
+    const blogsAtStart = await helper.blogsInDb();
 
-  //   // Delete certain blog
-  //   const blogToBDeleted = blogsAtStart[0];
-  //   await api
-  //     .delete(`/api/blogs/${blogToBDeleted.id}`)
-  //     .set('Authorization', `bearer ${token}`)
-  //     .expect(403);
-  // });
+    // Delete certain blog
+    const blogToBDeleted = blogsAtStart[0];
+    await api
+      .delete(`/api/blogs/${blogToBDeleted.id}`)
+      .set('Authorization', `bearer ${token}`)
+      .expect(403);
+  });
 
-  // test('a blog can be deleted', async () => {
-  //   // Get all blogs in the db at start
-  //   const blogsAtStart = await helper.blogsInDb();
+  test('a blog can be deleted by the one who created it', async () => {
+    // Create a user
+    const usersAtStart = await helper.usersInDb();
+    const blogAuthorIndex = usersAtStart.findIndex((user) => user.username === 'blogauthor');
 
-  //   // Delete certain blog
-  //   const blogToBDeleted = blogsAtStart[0];
-  //   await api
-  //     .delete(`/api/blogs/${blogToBDeleted.id}`)
-  //     // .set('Authorization', `bearer ${token}`)
-  //     .expect(200)
-  //     .expect('Content-Type', /application\/json/);
+    let blogAuthor = null;
+    if (blogAuthorIndex === -1) {
+      const userCreationResponse = await api.post('/api/users').send({
+        username: 'blogauthor',
+        name: 'Blog Author',
+        password: 'blogauthor',
+      });
+      blogAuthor = userCreationResponse.body;
+    } else {
+      blogAuthor = usersAtStart[blogAuthorIndex];
+    }
 
-  //   // Get all blogs now.
-  //   const blogsAfterDeletion = await helper.blogsInDb();
-  //   expect(blogsAfterDeletion.length).toBe(blogsAtStart.length - 1);
-  //   // Total blogs must be 1 less and the blog that was deleted should not be present.
-  // });
+    // Login with the user
+    const userLoginResponse = await api.post('/api/login').send({
+      username: 'blogauthor',
+      password: 'blogauthor',
+    });
+
+    // Create a blog
+    const newBlog = {
+      title: 'Learn Node',
+      author: 'Jagan',
+      likes: 2,
+      url: '/node-is-powerful',
+      userId: blogAuthor.id,
+    };
+
+    const newBlogResponse = await api
+      .post('/api/blogs')
+      .set('Authorization', `bearer ${token}`)
+      .send(newBlog)
+      .expect(201);
+
+    // Get all blogs in the db after adding new blog
+    const blogsAtStart = await helper.blogsInDb();
+
+    // Delete certain blog
+    const blogToBDeleted = newBlogResponse.body;
+
+    console.log('blogToBDeleted : ', blogToBDeleted);
+    console.log('blogAuthor : ', blogAuthor);
+
+    const loginTokenForBlogAuthor = userLoginResponse.body.token;
+
+    await api
+      .delete(`/api/blogs/${blogToBDeleted.id}`)
+      .set('Authorization', `bearer ${loginTokenForBlogAuthor}`)
+      .expect(200)
+      .expect('Content-Type', /application\/json/);
+
+    // Get all blogs now.
+    const blogsAfterDeletion = await helper.blogsInDb();
+    expect(blogsAfterDeletion.length).toBe(blogsAtStart.length - 1);
+    // Total blogs must be 1 less and the blog that was deleted should not be present.
+  });
 });
 
 describe('updating a specific blog', () => {
