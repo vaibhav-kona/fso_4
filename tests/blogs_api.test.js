@@ -213,6 +213,9 @@ describe('deletion of blog', () => {
       password: 'blogauthor',
     });
 
+    const loginTokenForBlogAuthor = userLoginResponse.body.token;
+    console.log('loginTokenForBlogAuthor : ', loginTokenForBlogAuthor);
+
     // Create a blog
     const newBlog = {
       title: 'Learn Node',
@@ -224,7 +227,7 @@ describe('deletion of blog', () => {
 
     const newBlogResponse = await api
       .post('/api/blogs')
-      .set('Authorization', `bearer ${token}`)
+      .set('Authorization', `bearer ${loginTokenForBlogAuthor}`)
       .send(newBlog)
       .expect(201);
 
@@ -236,8 +239,6 @@ describe('deletion of blog', () => {
 
     console.log('blogToBDeleted : ', blogToBDeleted);
     console.log('blogAuthor : ', blogAuthor);
-
-    const loginTokenForBlogAuthor = userLoginResponse.body.token;
 
     await api
       .delete(`/api/blogs/${blogToBDeleted.id}`)
