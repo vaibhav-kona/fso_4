@@ -66,14 +66,18 @@ blogsRouter.delete('/:blogId', async (request, response, next) => {
     }
 
     const blogToBDeleted = await Blog.findById(request.params.blogId);
-    const blogAuthorId = blogToBDeleted.user && blogToBDeleted.user.toString();
+    if (blogToBDeleted) {
+      const blogAuthorId = blogToBDeleted.user && blogToBDeleted.user.toString();
 
-    if (decodedToken.id !== blogAuthorId) {
-      response.status(403).json({ error: 'not authorized to delete the blog' });
+      if (decodedToken.id !== blogAuthorId) {
+        response.status(403).json({ error: 'not authorized to delete the blog' });
+      } else {
+        await Blog.findByIdAndDelete(request.params.blogId).then((blogs) => {
+          response.json(blogs);
+        });
+      }
     } else {
-      await Blog.findByIdAndDelete(request.params.blogId).then((blogs) => {
-        response.json(blogs);
-      });
+      response.status(404).json({ error: 'Not found' });
     }
   } catch (error) {
     next(error);
